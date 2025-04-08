@@ -299,11 +299,6 @@ services:
     command: rust-consumer --storage functions_raw --consumer-group snuba-consumers --auto-offset-reset=latest --max-batch-time-ms 1000 --no-strict-offset-reset
     profiles:
       - feature-complete
-  snuba-spans-consumer:
-    <<: *snuba_defaults
-    command: rust-consumer --storage spans --consumer-group snuba-spans-consumers --auto-offset-reset=latest --max-batch-time-ms 1000 --no-strict-offset-reset
-    profiles:
-      - feature-complete
   symbolicator:
     <<: *restart_policy
     image: "$SYMBOLICATOR_IMAGE"
@@ -452,6 +447,7 @@ services:
     <<: *restart_policy
     ports:
       - "$SENTRY_BIND:80/tcp"
+      - "443:443/tcp"
     image: "nginx:1.25.4-alpine"
     volumes:
       - type: bind
@@ -518,6 +514,32 @@ services:
       - sentry-vroom:/var/lib/sentry-profiles
     profiles:
       - feature-complete
+  detect-performance-issues:
+    <<: *sentry_defaults
+    command: run consumer --no-strict-offset-reset detect-performance-issues --consumer-group detect-performance-issues
+    profiles: [feature-complete]
+  process-spans:
+    <<: *sentry_defaults
+    command: run consumer --no-strict-offset-reset process-spans --consumer-group process-spans
+    profiles: [feature-complete]
+  eap-spans-subscription-results:
+    <<: *sentry_defaults
+    command: run consumer --no-strict-offset-reset eap-spans-subscription-results --consumer-group eap-spans-subscription-results
+    profiles: [feature-complete]
+  # !!! NOTICE, READ ME !!!
+  # Like usual, this snuba consumer uses `rust-consumer` version.
+  # If you are getting some issues (crash or anything),
+  # feel free to change `rust-consumer` to `consumer`
+  # and remove the `--use-rust-processor` flag.
+  # which is written in Python.
+  snuba-spans-consumer:
+    <<: *snuba_defaults
+    command: rust-consumer --storage spans --consumer-group snuba-spans-consumers --auto-offset-reset=latest --max-batch-time-ms 1000 --no-strict-offset-reset --use-rust-processor
+    profiles: [feature-complete]
+  snuba-eap-spans-consumer:
+    <<: *snuba_defaults
+    command: rust-consumer --storage eap_spans --consumer-group snuba-eap-spans-consumers --auto-offset-reset=latest --max-batch-time-ms 1000 --no-strict-offset-reset --use-rust-processor
+    profiles: [feature-complete]
 
 volumes:
   # These store application data that should persist across restarts.
