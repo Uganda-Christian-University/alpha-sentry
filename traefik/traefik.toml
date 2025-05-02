@@ -26,6 +26,10 @@ storage = "acme.json"
 [certificatesResolvers.letsencrypt.acme.httpChallenge]
 entryPoint = "http"
 
+[[tls.certificates]]
+certFile = "/path/to/domain.cert"
+keyFile = "/path/to/domain.key"
+
 [api]
 dashboard = true
 
