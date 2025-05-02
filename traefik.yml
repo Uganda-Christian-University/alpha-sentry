@@ -1,0 +1,64 @@
+http:
+  routers:
+    sentry:
+      entryPoints:
+        - web
+        - websecure
+      service: sentry@file
+      rule: "Host(`alpha-sentry.ucu.ac.ug`)"
+      tls: {}  # Simple TLS config here, certificates defined globally below
+      middlewares:
+        - https_redirect@file
+        - cors_headers@file
+        - rate_limiter@file
+
+  services:
+    sentry:
+      loadBalancer:
+        servers:
+          - url: "http://web:9000"  # Changed from localhost to service name
+        healthCheck:
+          scheme: http
+          path: /_health/
+          interval: 30s
+          timeout: 10s
+        passHostHeader: true
+
+  middlewares:
+    https_redirect:
+      redirectScheme:
+        scheme: "https"
+        port: "443"
+        permanent: true
+    cors_headers:
+      headers:
+        customResponseHeaders:
+          server: "Foo Bar just to mask Traefik/Nginx value"
+        addVaryHeader: true
+        accessControlAllowCredentials: false
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowHeaders:
+          - "sentry-trace"
+          - "baggage"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        accessControlExposeHeaders:
+          - "sentry-trace"
+          - "baggage"
+        sslRedirect: true
+    rate_limiter:
+      rateLimit:
+        average: 250
+        period: 5s
+        burst: 100
+
+# Define certificates globally
+tls:
+  certificates:
+    - certFile: "/ssl/cert.cer"
+      keyFile: "/ssl/cert.key"

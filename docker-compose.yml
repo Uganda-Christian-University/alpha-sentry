@@ -330,6 +330,12 @@ services:
       nofile:
         soft: 4096
         hard: 4096
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sentry.rule=Host(`alpha-sentry.ucu.ac.ug`)"
+      - "traefik.http.routers.sentry.entrypoints=web,websecure"
+      - "traefik.http.routers.sentry.tls=true"
+      - "traefik.http.services.sentry.loadbalancer.server.port=9000"
     healthcheck:
       <<: *healthcheck_defaults
       test:
@@ -448,33 +454,33 @@ services:
         BASE_IMAGE: sentry-self-hosted-local
     entrypoint: "/entrypoint.sh"
     command: '"0 0 * * * gosu sentry sentry cleanup --days $SENTRY_EVENT_RETENTION_DAYS"'
-  nginx:
-    <<: *restart_policy
-#    ports:
-#      - "$SENTRY_BIND:80/tcp"
-    image: "nginx:1.25.4-alpine"
-    volumes:
-      - type: bind
-        read_only: true
-        source: ./nginx.conf
-        target: /etc/nginx/nginx.conf
-      - type: bind
-        read_only: true
-        source: ./ssl
-        target: /etc/nginx/ssl
-      - sentry-nginx-cache:/var/cache/nginx
-      - sentry-nginx-www:/var/www
-    depends_on:
-      - web
-      - relay
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.sentry.entrypoints=https
-      - traefik.http.routers.sentry.rule=Host(`alpha-sentry.ucu.ac.ug`)
-      - traefik.http.routers.sentry.tls=true
-        # use a custom cert instead of lets encrypt
-      - traefik.http.routers.sentry.tls.certresolver=letsencrypt
-      - traefik.http.services.sentry.loadbalancer.server.port=80
+#  nginx:
+#    <<: *restart_policy
+##    ports:
+##      - "$SENTRY_BIND:80/tcp"
+#    image: "nginx:1.25.4-alpine"
+#    volumes:
+#      - type: bind
+#        read_only: true
+#        source: ./nginx.conf
+#        target: /etc/nginx/nginx.conf
+#      - type: bind
+#        read_only: true
+#        source: ./ssl
+#        target: /etc/nginx/ssl
+#      - sentry-nginx-cache:/var/cache/nginx
+#      - sentry-nginx-www:/var/www
+#    depends_on:
+#      - web
+#      - relay
+#    labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.sentry.entrypoints=https
+#      - traefik.http.routers.sentry.rule=Host(`alpha-sentry.ucu.ac.ug`)
+#      - traefik.http.routers.sentry.tls=true
+#        # use a custom cert instead of lets encrypt
+##      - traefik.http.routers.sentry.tls.certresolver=letsencrypt
+#      - traefik.http.services.sentry.loadbalancer.server.port=80
   relay:
     <<: *restart_policy
     image: "$RELAY_IMAGE"
@@ -530,23 +536,21 @@ services:
     image: traefik:latest
     container_name: traefik
     restart: always
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file=true"
+      - "--providers.file.filename=/etc/traefik/traefik.yml"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"  # So that Traefik can listen to the Docker events
-      - "./traefik/traefik.toml:/traefik.toml"
-      - "./traefik/acme.json:/acme.json" # Traefik uses this to store LetsEncrypt certificates
-      - "./traefik/conf:/conf" # This allows setting other configuration, including Basic Auth user credentials for the Traefik monitoring dashboard
-    labels:
-      - traefik.enable=true
-      # These allow you to see the Traefik monitoring dashboard. You can remove them if you don't need it.
-      - traefik.http.routers.traefik.entrypoints=https
-      - traefik.http.routers.traefik.rule=Host(`traefik-dashboard.alpha-sentry.ucu.ac.ug`)
-      - traefik.http.routers.traefik.tls=true
-      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
-      - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.routers.traefik.middlewares=traefik-dashboard-auth@file
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./ssl:/ssl:ro  # Make sure this path matches where your cert files are
+
 volumes:
   # These store application data that should persist across restarts.
   sentry-data:
