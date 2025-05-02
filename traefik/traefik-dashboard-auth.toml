@@ -1,0 +1,5 @@
+[http.middlewares]
+[http.middlewares.traefik-dashboard-auth.basicAuth]
+users = [
+    "sre@ucu.ac.ug:$SentrySREPassword@25"
+]
