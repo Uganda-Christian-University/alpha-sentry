@@ -20,15 +20,9 @@ endpoint = "unix:///var/run/docker.sock"
 swarmModeRefreshSeconds = "15s"
 exposedbydefault = false
 
-[certificateResolvers.letsencrypt.acme]
-email = "support@example.com"
-storage = "acme.json"
-[certificatesResolvers.letsencrypt.acme.httpChallenge]
-entryPoint = "http"
-
 [[tls.certificates]]
-certFile = "/path/to/domain.cert"
-keyFile = "/path/to/domain.key"
+certFile = "/ssl/cert.cer"
+keyFile = "/ssl/cert.key"
 
 [api]
 dashboard = true

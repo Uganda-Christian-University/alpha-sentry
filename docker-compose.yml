@@ -458,6 +458,10 @@ services:
         read_only: true
         source: ./nginx.conf
         target: /etc/nginx/nginx.conf
+      - type: bind
+        read_only: true
+        source: ./ssl
+        target: /etc/nginx/ssl
       - sentry-nginx-cache:/var/cache/nginx
       - sentry-nginx-www:/var/www
     depends_on:
